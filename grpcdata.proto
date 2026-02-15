@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package elephant.cnc.net.v1;
+
+enum ContentType {
+    Unknown = 0;
+    Text = 1;
+    Image = 2;
+    Gcode = 3;
+};
+
+service GrpcData {
+    rpc Register (User) returns (RegisterResponse);
+    rpc sendMessage(stream SendMessageRequest) returns (stream SendMessageResponse);
+    rpc sendImage(stream SendImageRequest) returns (stream SendImageResponse);
+    }
+
+message SendMessageRequest {
+    uint64 timestamp = 1;
+    bytes content = 2;     // JSON data
+    ContentType type = 3;
+    string from = 4;       // user name
+    string to = 5;
+}
+
+message SendMessageResponse {
+    uint64 timestamp = 1;
+    bytes content = 2;     // JSON data
+    ContentType type = 3;
+    string from = 4;       // user name
+    string to = 5;
+}
+
+message SendImageRequest {
+    uint64 timestamp = 1;
+    bytes content = 2;     // JSON data
+    ContentType type = 3;
+    string from = 4;       // user name
+    string to = 5;
+}
+
+message SendImageResponse {
+    uint64 timestamp = 1;
+    bytes content = 2;     // JSON data
+    ContentType type = 3;
+    string from = 4;       // user name
+    string to = 5;
+}
+
+message User {
+    string name = 1;
+    string password = 2;
+    string from = 3;
+}
+
+message Users {
+    repeated User users = 1;
+}
+
+message RegisterResponse {
+  bool success = 1;
+  string message = 2; // 可包含失败原因（如用户名已存在等）
+}
