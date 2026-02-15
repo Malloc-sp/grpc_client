@@ -1,3 +1,5 @@
 #忽略build文件夹
 build/
+#忽略qt文件
+.qtcreator/
 
