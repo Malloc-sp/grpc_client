@@ -33,18 +33,20 @@ message SendMessageResponse {
 
 message SendImageRequest {
     uint64 timestamp = 1;
-    bytes content = 2;     // JSON data
-    ContentType type = 3;
-    string from = 4;       // user name
-    string to = 5;
+    string cameraType = 2;
+    bytes content = 3;     // JSON data
+    ContentType type = 4;
+    string from = 5;       // user name
+    string to = 6;
 }
 
 message SendImageResponse {
     uint64 timestamp = 1;
-    bytes content = 2;     // JSON data
-    ContentType type = 3;
-    string from = 4;       // user name
-    string to = 5;
+    string cameraType = 2;
+    bytes content = 3;     // JSON data
+    ContentType type = 4;
+    string from = 5;       // user name
+    string to = 6;
 }
 
 message User {

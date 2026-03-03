@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 find_package(absl REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core imgcodecs highgui imgproc)
 
 # Proto 文件名
 set(PROTO_FILE grpcdata.proto)
@@ -41,7 +42,7 @@ add_executable(minimal_client
     ${GRPC_SRCS}
 )
 
-target_include_directories(minimal_client PRIVATE ${PROTO_GENERATED_DIR})
+target_include_directories(minimal_client PRIVATE ${PROTO_GENERATED_DIR} ${OpenCV_INCLUDE_DIRS})
 
 # ---------- 4. 链接库 ----------
 target_link_libraries(minimal_client
@@ -52,4 +53,5 @@ target_link_libraries(minimal_client
     absl::synchronization
     absl::time
     absl::cord
+    ${OpenCV_LIBS} 
 )
