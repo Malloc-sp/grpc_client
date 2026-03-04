@@ -56,13 +56,9 @@ int main() {
     SendImageResponse response;
     while (stream->Read(&response)) {
         const std::string &jpeg_data = response.content();
+        const std::string &name = response.cameratype();
+        std::cout << name << std::endl;
         if (jpeg_data.empty()) continue;
-
-        // 保存到文件（仅用于测试）
-        static int counter = 0;
-        std::ofstream out(std::string("/tmp/frame_") + std::to_string(counter++) + ".jpg", std::ios::binary);
-        out.write(jpeg_data.data(), jpeg_data.size());
-        out.close();
 
         // 将 std::string 转换为 std::vector<char> 供 OpenCV 解码
         std::vector<char> img_vec(jpeg_data.begin(), jpeg_data.end());
