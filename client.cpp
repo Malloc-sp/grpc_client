@@ -5,6 +5,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <fstream>
+#include <chrono>
 
 using grpc::ClientContext;
 using grpc::CreateChannel;
@@ -39,48 +40,67 @@ std::string StatusCodeToString(grpc::StatusCode code) {
 }
 
 int main() {
-    std::string ip = "192.168.60.132";
+    std::string ip = "192.168.7.42";
     auto channel = CreateChannel(ip + ":65002", InsecureChannelCredentials());
     auto stub = GrpcData::NewStub(channel);
-    ClientContext ctx;
-    ctx.AddMetadata("user-from", "PC");
-    auto stream = stub->sendImage(&ctx);  // 假设这是服务端主动推送的流
-    if (!stream) {
-        std::cerr << "Stream creation failed\n";
+    
+    ClientContext msg_ctx;
+    msg_ctx.AddMetadata("user-from", "PC");
+    msg_ctx.AddMetadata("user-name", ip);
+    msg_ctx.AddMetadata("user-password", "355793");
+    //msg_ctx.AddMetadata("", "PC");
+    auto msg_stream = stub->sendMessage(&msg_ctx);
+    if (!msg_stream) {
+        std::cerr << "sendMessage stream creation failed\n";
+        //stream->WritesDone();
+        //(void)stream->Finish();
         return 1;
     }
-
-    // 创建 OpenCV 窗口
-    cv::namedWindow("Video Stream", cv::WINDOW_NORMAL);
-
-    SendImageResponse response;
-    while (stream->Read(&response)) {
-        const std::string &jpeg_data = response.content();
-        const std::string &name = response.cameratype();
-        std::cout << name << std::endl;
-        if (jpeg_data.empty()) continue;
-
-        // 将 std::string 转换为 std::vector<char> 供 OpenCV 解码
-        std::vector<char> img_vec(jpeg_data.begin(), jpeg_data.end());
-
-        // 解码 JPEG -> cv::Mat
-        cv::Mat frame = cv::imdecode(img_vec, cv::IMREAD_COLOR);
-        if (frame.empty()) {
-            std::cerr << "Failed to decode image" << std::endl;
-            continue;
+    printf("test\n");
+    std::thread reader([&]() {
+        SendMessageResponse resp;
+        while (msg_stream->Read(&resp)) {
+            if (resp.type() != elephant::cnc::net::v1::ContentType::Text) {
+                //std::cout << "[recv non-Text type=" << resp.type() << "] size=" << resp.content().size() << "\n";
+                continue;
+            }
+            const std::string text(resp.content().begin(), resp.content().end());
+            // std::cout << "[recv] from=" << resp.from() << " to=" << resp.to() << " ts=" << resp.timestamp()
+            //           << " text=" << text << "\n";
         }
+    });
 
-        // 显示图像
-        cv::imshow("Video Stream", frame);
+    std::cout << "Type messages to send. Type /quit to exit.\n";
+    std::string line;
+    while (std::getline(std::cin, line)) {
+        if (line == "/quit") break;
+        if (line.empty()) continue;
 
-        // 按 'q' 键退出
-        if (cv::waitKey(1) == 'q') break;
+        SendMessageRequest req;
+        const auto now = std::chrono::time_point_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now());
+        req.set_timestamp(static_cast<uint64_t>(now.time_since_epoch().count()));
+        req.set_type(elephant::cnc::net::v1::ContentType::Text);
+        req.set_from("PC");
+        req.set_to("192.168.7.42_CNC");
+        req.set_content(line);
+
+        if (!msg_stream->Write(req)) {
+            std::cerr << "Write() failed (stream closed by server?)\n";
+            break;
+        }
     }
 
-    // 流结束或出错
-    stream->WritesDone();
-    auto status = stream->Finish();
-    std::cout << "Stream finished with status: " << StatusCodeToString(status.error_code()) << std::endl;
+    msg_stream->WritesDone();
+    if (reader.joinable()) reader.join();
+    auto msg_status = msg_stream->Finish();
+    std::cout << "sendMessage finished with status: " << StatusCodeToString(msg_status.error_code()) << "\n";
+
+    // 关闭之前创建的 sendImage 流（本次不处理 Image）
+    //stream->WritesDone();
+    //auto img_status = stream->Finish();
+    //std::cout << "sendImage finished with status: " << StatusCodeToString(img_status.error_code()) << "\n";
+
     cv::destroyAllWindows();
     return 0;
 }
